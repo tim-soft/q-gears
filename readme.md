@@ -1,14 +1,26 @@
-# What is QGears? [![Build Status](https://travis-ci.org/q-gears/q-gears.svg?branch=master)](https://travis-ci.org/q-gears/q-gears)
+|  Build |   status | 
+|:---:|:---:|
+|Linux/OSX|[![Build Status](https://travis-ci.org/q-gears/q-gears.svg?branch=master)](https://travis-ci.org/q-gears/q-gears)  |
+|Windows 32 |  [![Win32 status](https://paulsapps.visualstudio.com/DefaultCollection/_apis/public/build/definitions/8a250c8d-747e-4705-b4ff-802acb5a79d9/4/badge)]() | 
+| Windows 64| [![Win64 status](https://paulsapps.visualstudio.com/DefaultCollection/_apis/public/build/definitions/8a250c8d-747e-4705-b4ff-802acb5a79d9/5/badge)]()  |
+| Coverage   |[![Coverage Status](https://coveralls.io/repos/q-gears/q-gears/badge.svg)](https://coveralls.io/r/q-gears/q-gears)  |
+| Coverity   |[![Coverity scan status](https://scan.coverity.com/projects/3861/badge.svg)](https://scan.coverity.com/projects/3861) |
 
+
+# What is QGears? 
 
 Q-Gears is an RPG engine for games like Squaresoft's Final Fantasy 7, Final Fantasy IX or Xenogears. It is designed to be cross-platfrom and run on modern operating systems such as Win32 and Linux.
+
+## Where can I get a build of QGears?
+
+See here for builds http://qgears.itscovarr.com here you will find nightly builds and Linux builds for every version. Since the Windows version only builds daily not every change will have a matching Windows build.
 
 ### How do I build QGears?
 
 
 #### Ubuntu Linux 14.04
 
-Ogre version must be 1.9, Boost version must be 55, gcc version must be 4.9, QtCreator is optional - install if you want to use this as the IDE (recommended).
+Ogre version must be 1.9, Qt version 4.8, Boost version must be 55, gcc version must be 4.9, QtCreator is optional - install if you want to use this as the IDE (recommended).
 
 **Install required packages:**
 ```
@@ -23,6 +35,7 @@ Ogre version must be 1.9, Boost version must be 55, gcc version must be 4.9, QtC
 * sudo apt-get install qtcreator
 * sudo apt-get install libogre-1.9-dev
 * sudo apt-get install libois-dev
+* sudo apt-get install libqt4-dev
 ```
 
 **Sync down the QGears source code:**
@@ -75,6 +88,7 @@ Anyway here is what we need for Ubuntu 12.04 (Travis-CI) **WARNING** updating th
 * sudo apt-get install libglu-dev
 * sudo apt-get install libfreetype6-dev 
 * sudo apt-get install checkinstall
+* sudo apt-get install libqt4-dev
 ```
 
 **Sync down source for Ogre 1.9:**
@@ -154,12 +168,20 @@ Select "Add CMake to the system PATH for all users" - this makes things easier l
 ```
 http://sourceforge.net/projects/boost/files/boost/1.55.0/boost_1_55_0.zip/download
 ```
+Extract to C:\boost_1_55_0. 
 
-Extract to C:\boost_1_55_0. Now we need to compile boost.
+**WARNING**: I recommend extracting using 7zip, if not then be sure to go in to the file properties and click "unblock" otherwise you may see "access denied" errors when building as windows will mark all of the executables as unsafe since the files came from the Internet.
+
+Now we need to compile boost.
 
 **Build boost 55:**
 
-Open the Visual Studio 2013 command prompt and cd to the boost dir by entering 
+Open the Visual Studio 2013 command prompt. This can be found at "Start menu -> All programs -> Visual studio 2013 -> Visual studio tools" then you'll see "Developer Command Prompt for VS2013". Which is simply a shortcut for:
+
+%comspec% /k ""C:\Program Files (x86)\Microsoft Visual Studio 12.0\Common7\Tools\VsDevCmd.bat""
+
+In the command prompt cd to the boost dir by entering:
+
 ```
 "C:\boost_1_55_0" 
 Then run
@@ -173,6 +195,25 @@ b2 --toolset=msvc-12.0 --build-type=complete stage
 http://zlib.net/zlib128-dll.zip
 ```
 Extract to the root of C drive.
+
+
+**Download Qt 4.8 source code:**
+```
+https://download.qt.io/archive/qt/4.8/4.8.6/qt-everywhere-opensource-src-4.8.6.zip
+```
+Again Extract to the root of C drive.
+
+**Build Qt:**
+
+Open a Visual Studio 2013 command prompt:
+
+cd to extracted source location and enter:
+
+```
+configure -platform win32-msvc2013 -no-webkit -debug-and-release -no-phonon -no-qt3support -mp -no-scripttools -nomake demos -nomake examples -no-openssl 
+```
+
+Key in "o" to use the open source license and then "y" to agree. Once this is done enter "nmake" to finish compling Qt.
 
 Now sync down the QGears source code, first create a directory some where you want to sync the code to using Windows explorer. Then right in the newly created directory and select "GIT Bash here".
 
@@ -188,9 +229,12 @@ Now cd to where you synced the qgears source code to. For me this was "cd C:\Use
 ```
 mkdir build
 cd build
-set OGRE_HOME=C:\OgreSDK\OgreSDK_vc12_v1-9-0
-cmake .. -DZLIB_ROOT=C:\zlib128-dll -DBOOST_ROOT=C:\boost_1_55_0
+set QTDIR=C:/qt-everywhere-opensource-src-4.8.6
+set OGRE_HOME=C:/OgreSDK/OgreSDK_vc12_v1-9-0
+cmake .. -DZLIB_ROOT=C:/zlib128-dll -DBOOST_ROOT=C:/boost_1_55_0
 ```
+
+(Note how we use / and not \ in paths here).
 
 Now you can open the newly created QGears.sln in Visual Studio and build Win32/Release or Debug. If files are added/deleted/or the depends change then repeat the set and cmake commands in the Visual Studio command prompt in order to update QGears.sln.
 

@@ -1,25 +1,19 @@
+#include "core/ConfigVar.h"
 #include "core/Timer.h"
 
-#include "core/ConfigVar.h"
 
-
-
-ConfigVar cv_timer_scale_game( "timer_scale_game", "Timer speed for game related things", "1" );
-
-
-
-template<>Timer *Ogre::Singleton< Timer >::msSingleton = NULL;
-
+ConfigVar cv_timer_scale_game("timer_scale_game", "Timer speed for game related things", "1");
+template<>Timer *Ogre::Singleton<Timer>::msSingleton = nullptr;
 
 
 Timer::Timer():
-    m_SystemTimeTotal( 0 ),
-    m_SystemTimeDelta( 0 ),
-    m_GameTimeTotal( 0 ),
-    m_GameTimeDelta( 0 )
+    m_SystemTimeTotal(0),
+    m_SystemTimeDelta(0),
+    m_GameTimeTotal(0),
+    m_GameTimeDelta( 0 ),
+    m_GameTimer( 0 )
 {
 }
-
 
 
 float
@@ -29,13 +23,11 @@ Timer::GetSystemTimeTotal()
 }
 
 
-
 float
 Timer::GetSystemTimeDelta()
 {
     return m_SystemTimeDelta;
 }
-
 
 
 float
@@ -45,7 +37,6 @@ Timer::GetGameTimeTotal()
 }
 
 
-
 float
 Timer::GetGameTimeDelta()
 {
@@ -53,13 +44,37 @@ Timer::GetGameTimeDelta()
 }
 
 
-
 void
-Timer::AddTime( float time )
+Timer::AddTime( const float time )
 {
     m_SystemTimeDelta = time;
     m_SystemTimeTotal += m_SystemTimeDelta;
 
     m_GameTimeDelta = time * cv_timer_scale_game.GetF();
     m_GameTimeTotal += m_GameTimeDelta;
+
+    if( m_GameTimer > 0 )
+    {
+        m_GameTimer -= time;
+        if( m_GameTimer < 0 )
+        {
+            m_GameTimer = 0;
+        }
+    }
+}
+
+
+
+void
+Timer::SetGameTimer( const float timer )
+{
+    m_GameTimer = timer;
+}
+
+
+
+int
+Timer::GetGameTimer() const
+{
+    return (int) m_GameTimer;
 }

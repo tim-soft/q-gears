@@ -39,14 +39,12 @@ add_library(Utility STATIC
   ${SOURCE_FILES}
 )
 
-set(LIBRARIES
+target_link_libraries(Utility
     ${OGRE_LIBRARIES}
     ${OIS_LIBRARIES}
     ${ZLIB_LIBRARIES}
-    QGearsMain
 )
-
-target_link_libraries(Utility ${LIBRARIES})
+SET_PROPERTY(TARGET Utility PROPERTY FOLDER "utilities")
 
 add_subdirectory(ffix_model_exporter)
 add_subdirectory(ffix_script_dumper)
@@ -61,6 +59,7 @@ add_subdirectory(ffvii_sound_dumper)
 add_subdirectory(ffvii_sound_dumper_psf)
 add_subdirectory(flevel)
 add_subdirectory(lzs)
+add_subdirectory(q-gears-launcher)
 add_subdirectory(xeno_cd_extract)
 add_subdirectory(xeno_model_exporter)
 add_subdirectory(xeno_script_dumper)

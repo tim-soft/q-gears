@@ -18,8 +18,8 @@ GNU General Public License for more details.
 #define __QGearsApplication_H__
 
 #include <OgreRoot.h>
-#include <Overlay/OgreOverlaySystem.h>
-
+#include <OgreOverlaySystem.h>
+#include <memory>
 #include "TypeDefine.h"
 
 namespace QGears
@@ -27,12 +27,18 @@ namespace QGears
     class Application : public Ogre::Singleton<Application>
     {
     public:
+        Application(Ogre::String pluginsFileName, Ogre::String resourcesFile, Ogre::String logFileName)
+            : m_plugins_filename(pluginsFileName), m_resources_filename(resourcesFile), m_log_filename(logFileName)
+        {
+
+        }
         Application( int argc, char *argv[] );
         virtual ~Application();
-        bool                initOgre( void );
+        bool                initOgre( bool hideWindow = false );
         Ogre::Root*         getRoot( void );
         Ogre::RenderWindow* getRenderWindow( void );
         const String&       getResourcesFilename( void );
+        Ogre::ResourceGroupManager* ResMgr() { return mResMgr; }
     protected:
         String  getWindowTitle( void ) const;
         bool    processCommandLine( int argc, char *argv[] );
@@ -46,7 +52,6 @@ namespace QGears
     private:
         typedef std::vector<std::shared_ptr<Ogre::ResourceManager>> ResourceManagerVector;
 
-        Application();
 
         static const char*      CLI_SECTION_GENERIC;
         static const char*      CLI_HELP;
@@ -72,6 +77,7 @@ namespace QGears
         std::unique_ptr<Ogre::OverlaySystem> m_overlay_system;
         Ogre::RenderWindow* m_render_window = nullptr; // Not owned
         ResourceManagerVector m_resource_managers;
+        Ogre::ResourceGroupManager* mResMgr = nullptr; // Not owned
     };
 }
 

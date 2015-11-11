@@ -24,6 +24,11 @@ add_executable(ff9_model_exporter
   ${HEADER_FILES}
   ${SOURCE_FILES}
 )
+SET_PROPERTY(TARGET ff9_model_exporter PROPERTY FOLDER "utilities")
+
+if (APPLE)
+target_link_libraries(ff9_model_exporter "-framework CoreFoundation -framework Cocoa -framework IOKit")
+endif()
 
 if(WIN32)
   set_target_properties(ff9_model_exporter PROPERTIES WIN32_EXECUTABLE ON)
@@ -34,6 +39,8 @@ endif()
 
 set(LIBRARIES
     Utility
+    QGearsMain
+    q-gears-data
 )
 target_link_libraries(ff9_model_exporter    ${LIBRARIES})
 

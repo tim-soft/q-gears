@@ -24,6 +24,7 @@ THE SOFTWARE.
 -----------------------------------------------------------------------------
 */
 #include "data/QGearsBackgroundFileSerializer.h"
+#include "data/QGearsPaletteFileSerializer.h"
 
 #include <OgreException.h>
 #include <OgreLogManager.h>
@@ -36,11 +37,11 @@ namespace QGears
     const String        BackgroundFileSerializer::SECTION_NAME_BACK   ("BACK");
     const String        BackgroundFileSerializer::SECTION_NAME_TEXTURE("TEXTURE");
     const String        BackgroundFileSerializer::TAG_FILE_END        ("END");
-    const Ogre::Real    BackgroundFileSerializer::unknown_24_SCALE( 10000000.0 );
+    const Ogre::Real    BackgroundFileSerializer::src_big_SCALE( 10000000.0 );
 
     //---------------------------------------------------------------------
     BackgroundFileSerializer::BackgroundFileSerializer() :
-        Serializer()
+        Serializer(), m_layer_index(BackgroundFile::LAYER_COUNT)
     {
     }
 
@@ -105,7 +106,7 @@ namespace QGears
                                           ,BackgroundFile *pDest )
     {
         readSectionHeader( stream, SECTION_NAME_PALETTE );
-        stream->read( pDest->getPalette(), BackgroundFile::PALETTE_ENTRY_COUNT );
+        stream->read( pDest->getPalette().data(), BackgroundFile::PALETTE_ENTRY_COUNT );
     }
 
     //---------------------------------------------------------------------
@@ -114,15 +115,15 @@ namespace QGears
                                              ,BackgroundFile *pDest )
     {
         readSectionHeader( stream, SECTION_NAME_BACK );
-        Layer *layer( pDest->getLayers() );
-        for( size_t i( 0 ); i < BackgroundFile::LAYER_COUNT; ++i, ++layer )
+        auto& layers( pDest->getLayers() );
+        for( size_t i( 0 ); i < BackgroundFile::LAYER_COUNT; ++i )
         {
             if( i != 0 )
             {
-                read1ByteBool( stream, layer->enabled );
+                read1ByteBool( stream, layers[i].enabled );
             }
 
-            readLayer( stream, layer, i );
+            readLayer(stream, &layers[i], i);
         }
     }
 
@@ -149,7 +150,31 @@ namespace QGears
             readShorts( stream, pDest->unknown_0E, 4 );
         }
         stream->skip( 2 * 2 ); // 2 * uint16 unused;
+        m_layer_index = layer_index;
         readVector( stream, pDest->sprites, sprite_count );
+
+        removeBuggySprites( pDest->sprites );
+    }
+
+    //---------------------------------------------------------------------
+    void
+    BackgroundFileSerializer::removeBuggySprites( SpriteList &sprites )
+    {
+        auto it = sprites.begin();
+        while (it != sprites.end())
+        {
+            const SpriteData &sprite = (*it);
+
+            if (std::abs(sprite.dst.x) > SPRITE_DST_MAX
+                    || std::abs(sprite.dst.y) > SPRITE_DST_MAX)
+            {
+                it = sprites.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
     }
 
     //---------------------------------------------------------------------
@@ -159,23 +184,66 @@ namespace QGears
         readObject( stream, pDest.dst );
         readShorts( stream, pDest.unknown_04, 2 );
         readObject( stream, pDest.src );
-        readShorts( stream, pDest.unknown_0C, 4 );
+        readObject( stream, pDest.src2 );
+        readShort( stream, pDest.width );
+        readShort( stream, pDest.height );
+
+        uint16 size;
+        // width and height are sometimes incorrect in the file
+        if ( m_layer_index < 2 )
+        {
+            size = 16;
+        }
+        else if ( m_layer_index < BackgroundFile::LAYER_COUNT)
+        {
+            size = 32;
+        }
+        else
+        {
+            OGRE_EXCEPT(Ogre::Exception::ERR_INVALIDPARAMS
+                ,"m_layer_index not set correctly"
+                ,"BackgroundFileSerializer::readObject" );
+        }
+        pDest.width = pDest.height = size;
 
         readShort( stream, pDest.palette_page );
         readShort( stream, pDest.depth );
 
-        stream->read( pDest.flags_18, sizeof( pDest.flags_18 ) );
-        uint8 flags[2];
-        stream->read( flags, sizeof( flags ) );
-        pDest.flags_20[0] = flags[0] > 0;
-        pDest.flags_20[1] = flags[1] > 0;
+        // Force depth values
+        switch ( m_layer_index )
+        {
+          case 0:
+            pDest.depth = 4095;
+            break;
+          case 2:
+            pDest.depth = 4096;
+            break;
+          case 3:
+            pDest.depth = 0;
+            break;
+        }
 
-        readShort( stream, pDest.unknown_1C );
+        uint8 animation[2];
+        stream->read( animation, sizeof( animation ) );
+        pDest.animation_id = animation[0];
+        pDest.animation_frame = animation[1];
+        uint8 has_blending[2];
+        stream->read( has_blending, sizeof( has_blending ) );
+        pDest.has_blending[0] = has_blending[0] > 0;
+        pDest.has_blending[1] = has_blending[1] > 0;
+
+        readShort( stream, pDest.blending );
         readShort( stream, pDest.data_page );
-        readShort( stream, pDest.unknown_20 );
-        readShort( stream, pDest.unknown_22 );
-        readObject( stream, pDest.unknown_24 );
-        pDest.unknown_24 /= unknown_24_SCALE;
+        readShort( stream, pDest.data_page2 );
+        // when data_page2 != 0, it must be used instead of data_page (not for the first layer)
+        if ( m_layer_index > 0 && pDest.data_page2 )
+        {
+            pDest.src = pDest.src2;
+            pDest.data_page = pDest.data_page2;
+        }
+        readShort( stream, pDest.colour_depth );
+        readObject( stream, pDest.src_big );
+        pDest.src_big /= src_big_SCALE;
         stream->skip( 2 * 2 ); // 2 * uint16 unused
     }
 
@@ -186,10 +254,26 @@ namespace QGears
                                           ,BackgroundFile *pDest )
     {
         readSectionHeader( stream, SECTION_NAME_TEXTURE );
-        Page *pages( pDest->getPages() );
-        for( size_t i(0); i < BackgroundFile::PAGE_COUNT; ++i )
+        for (auto& page : pDest->getPages())
         {
-            readObject( stream, pages[i] );
+            readObject(stream, page);
+        }
+    }
+
+    //---------------------------------------------------------------------
+    void
+    BackgroundFileSerializer::readObject( Ogre::DataStreamPtr& stream, Color& pDest )
+    {
+        uint16 colour;
+        readShort( stream, colour );
+        pDest.r = static_cast<float>(( colour & BIT_MASK_RED   ) >> 11);
+        pDest.g = static_cast<float>(( colour & BIT_MASK_GREEN ) >>  6);
+        pDest.b = static_cast<float>(colour & BIT_MASK_BLUE);
+        pDest /= BIT_SIZE;
+        pDest.a = 1.0f;
+        if ( colour == 0 )
+        {
+            pDest.a = 0.0f;
         }
     }
 
@@ -209,16 +293,25 @@ namespace QGears
                 ,"BackgroundFileSerializer::readObject" );
         }
 
+        size_t color_count( BackgroundFile::PAGE_DATA_SIZE );
+        pDest.colors.clear();
+        pDest.data.clear();
+
         if( pDest.value_size == 2 )
         {
-            Ogre::LogManager::getSingleton().stream()
-                << "Warning: Page value_size == 2 @" << stream->tell();
+            pDest.colors.reserve( color_count );
+            for( size_t i( color_count ); i--; )
+            {
+                Color colourDest;
+                readObject( stream, colourDest );
+                pDest.colors.push_back( colourDest );
+            }
         }
-
-        size_t data_size( pDest.value_size * BackgroundFile::PAGE_DATA_SIZE );
-        pDest.data.clear();
-        pDest.data.resize( data_size );
-        stream->read( &pDest.data[0], data_size );
+        else
+        {
+            pDest.data.resize( color_count );
+            stream->read( &pDest.data[0], color_count );
+        }
     }
 
     //---------------------------------------------------------------------

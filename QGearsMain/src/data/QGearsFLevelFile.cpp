@@ -37,6 +37,7 @@ THE SOFTWARE.
 #include "data/QGearsHRCFileManager.h"
 #include "map/QGearsBackground2DFileManager.h"
 #include "FF7Common.h"
+#include "core/Logger.h"
 
 namespace QGears
 {
@@ -51,8 +52,8 @@ namespace QGears
                  ,const String &group, bool isManual
                  ,Ogre::ManualResourceLoader *loader ) :
         Resource( creator, name, handle, group, isManual, loader )
-       ,m_background_texture_loader( NULL )
-       ,m_background_2d_loader( NULL )
+       ,m_background_texture_loader( nullptr )
+       ,m_background_2d_loader( nullptr )
     {
         createParamDictionary( getResourceType() );
     }
@@ -65,7 +66,7 @@ namespace QGears
             assert( !m_background_texture.isNull() );
             Ogre::TextureManager::getSingleton().remove( m_background_texture->getHandle() );
             delete m_background_texture_loader;
-            m_background_texture_loader = NULL;
+            m_background_texture_loader = nullptr;
         }
         m_background_texture.setNull();
 
@@ -74,7 +75,7 @@ namespace QGears
             assert( !m_background_2d.isNull() );
             Background2DFileManager::getSingleton().remove( m_background_2d->getHandle() );
             delete m_background_2d_loader;
-            m_background_2d_loader = NULL;
+            m_background_2d_loader = nullptr;
         }
         m_background_2d.setNull();
 
@@ -87,17 +88,22 @@ namespace QGears
     {
         FLevelFileSerializer serializer;
         Ogre::DataStreamPtr stream( openResource() );
+        if (stream.isNull())
+        {
+            LOG_ERROR("Failed to open resource");
+        }
+
         serializer.importFLevelFile( stream, this );
 
         String background_texture_name( getBackgroundTextureName() );
-        if( m_background_texture_loader == NULL )
+        if( m_background_texture_loader == nullptr )
         {
             m_background_texture_loader = new FLevelTextureLoader( *this );
             m_background_texture = Ogre::TextureManager::getSingleton().create( background_texture_name, mGroup, true, m_background_texture_loader );
         }
 
         String background_2d_name( getBackground2DName() );
-        if( m_background_2d_loader == NULL )
+        if( m_background_2d_loader == nullptr )
         {
             m_background_2d_loader = new FLevelBackground2DLoader( *this );
             m_background_2d = Background2DFileManager::getSingleton().createResource( background_2d_name, mGroup, true, m_background_2d_loader ).staticCast<Background2DFile>();
@@ -156,6 +162,7 @@ namespace QGears
         m_model_list.setNull();
         m_walkmesh.setNull();
         m_hrc_files.clear();
+        m_triggers.setNull();
     }
 
     //--------------------------------------------------------------------------
@@ -173,11 +180,21 @@ namespace QGears
         return 0;
     }
 
+    const std::vector<u8>& FLevelFile::getRawScript() const
+    {
+        return m_rawScript;
+    }
+
     //--------------------------------------------------------------------------
     const BackgroundFilePtr&
     FLevelFile::getBackground( void ) const
     {
         return m_background;
+    }
+
+    void FLevelFile::setRawScript(const std::vector<u8>& scriptData)
+    {
+        m_rawScript = scriptData;
     }
 
     //--------------------------------------------------------------------------
@@ -236,11 +253,21 @@ namespace QGears
         return m_walkmesh;
     }
 
+    const TriggersFilePtr& FLevelFile::getTriggers() const
+    {
+        return m_triggers;
+    }
+
     //--------------------------------------------------------------------------
     void
     FLevelFile::setWalkmesh( const WalkmeshFilePtr &walkmesh )
     {
         m_walkmesh = walkmesh;
+    }
+
+    void FLevelFile::setTriggers(const TriggersFilePtr& triggers)
+    {
+        m_triggers = triggers;
     }
 
     //--------------------------------------------------------------------------

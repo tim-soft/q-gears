@@ -28,7 +28,7 @@ public:
     Background2D();
     virtual ~Background2D();
 
-    void InputDebug( const Event& event );
+    void InputDebug(const QGears::Event& event);
     void Update();
     void UpdateDebug();
     void OnResize();
@@ -121,6 +121,12 @@ private:
     Ogre::HardwareVertexBufferSharedPtr   m_AddVertexBuffer;
     unsigned int                          m_AddMaxVertexCount;
     Ogre::MaterialPtr                     m_AddMaterial;
+
+    // subtract blended
+    Ogre::RenderOperation                 m_SubtractRenderOp;
+    Ogre::HardwareVertexBufferSharedPtr   m_SubtractVertexBuffer;
+    unsigned int                          m_SubtractMaxVertexCount;
+    Ogre::MaterialPtr                     m_SubtractMaterial;
 
     Entity*                               m_ScrollEntity;
     Ogre::Vector2                         m_ScrollPositionStart;

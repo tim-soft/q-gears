@@ -5,15 +5,9 @@
 #include <OgreString.h>
 
 #include "Event.h"
-extern "C"
-{
-    #include <lua.h>
-}
-#include <luabind/luabind.hpp>
+#include "LuaIncludes.h"
 
 class Entity;
-
-
 
 struct ScriptId
 {
@@ -70,7 +64,7 @@ public:
     ScriptManager();
     virtual ~ScriptManager();
 
-    void Input( const Event& event );
+    void Input(const QGears::Event& event);
     void Update( const Type type );
 
     void RunString( const Ogre::String& lua );

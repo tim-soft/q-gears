@@ -20,6 +20,7 @@ add_executable(ff7_font_exporter
   ${HEADER_FILES}
   ${SOURCE_FILES}
 )
+SET_PROPERTY(TARGET ff7_font_exporter PROPERTY FOLDER "utilities")
 
 if(WIN32)
   set_target_properties(ff7_font_exporter PROPERTIES WIN32_EXECUTABLE ON)
@@ -30,7 +31,9 @@ endif()
 
 set(LIBRARIES
     Utility
-	${ZLIB_LIBRARIES}
+    QGearsMain
+    q-gears-data
+    ${ZLIB_LIBRARIES}
 )
 target_link_libraries(ff7_font_exporter    ${LIBRARIES})
 

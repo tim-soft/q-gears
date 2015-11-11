@@ -18,6 +18,7 @@ add_executable(lzs
   ${HEADER_FILES}
   ${SOURCE_FILES}
 )
+SET_PROPERTY(TARGET lzs PROPERTY FOLDER "utilities")
 
 if(WIN32)
   set_target_properties(lzs PROPERTIES WIN32_EXECUTABLE ON)
@@ -28,6 +29,8 @@ endif()
 
 set(LIBRARIES
     Utility
+    QGearsMain
+    q-gears-data
 )
 target_link_libraries(lzs    ${LIBRARIES})
 

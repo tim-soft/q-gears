@@ -33,6 +33,8 @@ THE SOFTWARE.
 #include "common/TypeDefine.h"
 #include "data/QGearsPaletteFile.h"
 
+#include <array>
+
 namespace QGears
 {
     // TODO inherit from Qgears Ressource
@@ -63,23 +65,27 @@ namespace QGears
         struct SpriteData
         {
             Pixel dst;
-            uint16 unknown_04[2];
+            uint16 unknown_04[2]; // Unused
             Pixel src;
-            uint16 unknown_0C[4];
+            Pixel src2; // used for special effects pages, when data_page2 != 0, it must be used instead of src
+            uint16 width;
+            uint16 height;
 
             uint16 palette_page;
-            uint16 depth;
-            uint8  flags_18[2];
-            bool   flags_20[2];
-            uint16 unknown_1C; // maybe some 'mode'
+            uint16 depth; // <=> Z
+            uint8  animation_id;
+            uint8  animation_frame;
+            bool   has_blending[2];
+            uint16 blending;
             uint16 data_page;
-            uint16 unknown_20;
-            uint16 unknown_22;
-            Ogre::Vector3 unknown_24;
+            uint16 data_page2; // used for special effects pages, when data_page2 != 0, it must be used instead of data_page
+            uint16 colour_depth; // Use texture page depth instead
+            Ogre::Vector3 src_big; // For PC use (z = unknown, x = srcX / 16 * 625000, y = srcY / 16 * 625000)
         };
 
 
         typedef std::vector<SpriteData> SpriteList;
+        typedef std::vector<SpriteData*> SpritePtrList;
 
         struct Layer
         {
@@ -93,8 +99,10 @@ namespace QGears
             SpriteList sprites;
         };
 
+        typedef PaletteFile::Color Color;
 
-        typedef std::vector<uint8>  Buffer;
+        typedef std::vector<uint8> Buffer;
+        typedef std::vector<Color> Colors;
 
         struct Page
         {
@@ -104,17 +112,16 @@ namespace QGears
             // uint8 if value_size == 1, uint16 if value_size == 2
             //uint8 data[PAGE_DATA_WIDTH][PAGE_DATA_HEIGHT];
             Buffer data;
+            Colors colors;
         };
 
-        typedef PaletteFile::Color Color;
+        std::array<Layer, LAYER_COUNT>& getLayers(void) { return m_layers; }
+        std::array<uint8, PALETTE_ENTRY_COUNT>& getPalette(void) { return m_palette; }
+        std::array<Page, PAGE_COUNT>&  getPages(void) { return m_pages; }
 
-        virtual Layer* getLayers ( void ) { return m_layers;  }
-        virtual uint8* getPalette( void ) { return m_palette; }
-        virtual Page*  getPages  ( void ) { return m_pages;   }
+        Ogre::Image*        createImage     ( const PaletteFilePtr &palette );
 
-        virtual Ogre::Image*        createImage     ( const PaletteFilePtr &palette ) const;
-
-        virtual void addAllSprites( SpriteList& sprites ) const;
+        void addAllSprites( SpritePtrList& sprites ) ;
 
     protected:
         virtual void loadImpl();
@@ -124,10 +131,10 @@ namespace QGears
         virtual size_t calculateSize( const Page  &page  ) const;
 
     private:
-        Layer m_layers [ LAYER_COUNT ];
-        uint8 m_palette[ PALETTE_ENTRY_COUNT ];
+        std::array<Layer, LAYER_COUNT> m_layers;
+        std::array<uint8, PALETTE_ENTRY_COUNT> m_palette;
 
-        Page m_pages[ PAGE_COUNT ];
+        std::array<Page, PAGE_COUNT> m_pages;
     };
 
     typedef Ogre::SharedPtr<BackgroundFile> BackgroundFilePtr;

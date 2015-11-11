@@ -60,6 +60,7 @@ add_executable(ff7_sound_dumper_psf
   ${HEADER_FILES}
   ${SOURCE_FILES}
 )
+SET_PROPERTY(TARGET ff7_sound_dumper_psf PROPERTY FOLDER "utilities")
 
 if(WIN32)
   set_target_properties(ff7_sound_dumper_psf PROPERTIES WIN32_EXECUTABLE ON)
@@ -70,6 +71,8 @@ endif()
 
 set(LIBRARIES
     Utility
+    QGearsMain
+    q-gears-data
 )
 target_link_libraries(ff7_sound_dumper_psf    ${LIBRARIES})
 

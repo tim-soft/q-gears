@@ -35,7 +35,10 @@ GNU General Public License for more details.
 #include "map/QGearsWalkmeshFileManager.h"
 #include "data/FF7ModelListFileManager.h"
 #include "data/QGearsLGPArchiveFactory.h"
+#include "data/QGearsTriggersFile.h"
+#include "data/QGearsMapListFile.h"
 #include "common/make_unique.h"
+#include "qgears_version.h"
 
 template<> QGears::Application *Ogre::Singleton<QGears::Application>::msSingleton = nullptr;
 
@@ -72,7 +75,7 @@ namespace QGears
 
     //--------------------------------------------------------------------------
     bool
-    Application::initOgre()
+    Application::initOgre(bool hideWindow)
     {
         if( m_initialized )
         {
@@ -81,9 +84,12 @@ namespace QGears
 
         m_initialized = true;
 
-        if( !processCommandLine( m_argc, m_argv ) )
+        if (m_argc && m_argv)
         {
-            return false;
+            if (!processCommandLine(m_argc, m_argv))
+            {
+                return false;
+            }
         }
 
         m_root = std::make_unique<Ogre::Root>( m_plugins_filename, m_config_filename, m_log_filename );
@@ -98,11 +104,22 @@ namespace QGears
         // Show the configuration dialog and initialise the system
         // You can skip this and use root.restoreConfig() to load configuration
         // settings if you were sure there are valid ones saved in ogre.cfg
-        if( !m_root->restoreConfig() && !m_root->showConfigDialog() )
+        if(/* !m_root->restoreConfig() &&*/ !m_root->showConfigDialog() )
         {
             return false;
         }
-        m_render_window = m_root->initialise( true, getWindowTitle() );
+
+        if (hideWindow)
+        {
+            Ogre::NameValuePairList list;
+            list.emplace("hidden", "true");
+            m_root->initialise(false, getWindowTitle());
+            m_render_window = m_root->createRenderWindow(getWindowTitle(), 1, 1, false, &list);
+        }
+        else
+        {
+            m_render_window = m_root->initialise(true, getWindowTitle());
+        }
 
         registerArchiveFactories();
         loadResourcesConfig();
@@ -124,7 +141,7 @@ namespace QGears
         Ogre::ConfigFile::SectionIterator section( config_file.getSectionIterator() );
 
         Ogre::String section_name, archive_type, archive_name;
-        Ogre::ResourceGroupManager &res_gm( Ogre::ResourceGroupManager::getSingleton() );
+        mResMgr = (&Ogre::ResourceGroupManager::getSingleton());
         while( section.hasMoreElements() )
         {
             section_name = section.peekNextKey();
@@ -135,7 +152,7 @@ namespace QGears
             {
                 archive_type = it->first;
                 archive_name = it->second;
-                res_gm.addResourceLocation( archive_name, archive_type, section_name, true );
+                mResMgr->addResourceLocation(archive_name, archive_type, section_name, true);
                 ++it;
             }
         }
@@ -264,6 +281,8 @@ namespace QGears
         m_resource_managers.emplace_back( std::make_shared<QGears::LZSFLevelFileManager>() );
         m_resource_managers.emplace_back( std::make_shared<QGears::BackgroundFileManager>() );
         m_resource_managers.emplace_back( std::make_shared<QGears::Background2DFileManager>() );
+        m_resource_managers.emplace_back(std::make_shared<QGears::TriggersFileManager>());
+        m_resource_managers.emplace_back(std::make_shared<QGears::MapListFileManager>());
     }
 
     //--------------------------------------------------------------------------

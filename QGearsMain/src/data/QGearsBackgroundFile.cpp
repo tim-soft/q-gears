@@ -64,8 +64,16 @@ namespace QGears
     void
     BackgroundFile::unloadImpl()
     {
-        memset( m_layers , 0, sizeof( m_layers  ) );
-        memset( m_palette, 0, sizeof( m_palette ) );
+        for (auto& layer : m_layers)
+        {
+            memset(&layer, 0, sizeof(layer));
+        }
+
+        for (auto& pal : m_palette)
+        {
+            memset(&pal, 0, sizeof(pal));
+        }
+
         for( size_t i(PAGE_COUNT); i--; )
         {
             m_pages[i].enabled = false;
@@ -118,23 +126,27 @@ namespace QGears
 
     //---------------------------------------------------------------------
     void
-    BackgroundFile::addAllSprites( SpriteList& sprites ) const
+        BackgroundFile::addAllSprites(SpritePtrList& sprites)
     {
         for( size_t i(0); i < LAYER_COUNT; ++i )
         {
             if( m_layers[i].enabled )
             {
-                sprites.insert( sprites.end(), m_layers[i].sprites.begin(), m_layers[i].sprites.end() );
+                for (auto& it : m_layers[i].sprites)
+                {
+                    SpriteData* ptr = &it;
+                    sprites.push_back(ptr);
+                }
             }
         }
     }
 
     //---------------------------------------------------------------------
     Ogre::Image*
-    BackgroundFile::createImage( const PaletteFilePtr &palette ) const
+    BackgroundFile::createImage( const PaletteFilePtr &palette )
     {
         assert( !palette.isNull() );
-        SpriteList sprites;
+        SpritePtrList sprites;
         addAllSprites( sprites );
 
         size_t sprite_count( sprites.size() );
@@ -152,62 +164,181 @@ namespace QGears
         Ogre::LogManager::getSingleton().stream()
             << "Image Size: " << width << " x " << height
             << " sprite_count " << sprite_count;
-        size_t dst_x( 0 ), dst_y( 0 );
-        for( SpriteList::const_iterator it( sprites.begin() )
-            ;it != sprites.end()
+        int dst_x(0), dst_y(0),
+                dst_x_16(0), dst_y_16(0),
+                dst_x_32(0), dst_y_32(0);
+        int dst_n_16(0);
+
+        for (auto it(sprites.begin())
+            ; it != sprites.end()
             ;++it)
         {
-            const Page& data_page( m_pages[it->data_page] );
-            const PaletteFile::Page& palette_page( palette->getPage( it->palette_page ) );
-            const Pixel& src( it->src );
-            if( !data_page.enabled )
+            SpriteData& sprite = **it;
+
+            const Page& data_page(m_pages[sprite.data_page]);
+            const Pixel& src(sprite.src);
+            if (!data_page.enabled)
             {
                 Ogre::LogManager::getSingleton().stream()
                     << "Error: referencing an disabled data page";
             }
-            for( uint16 y( SPRITE_HEIGHT ); y--; )
-            {
-                for( uint16 x( SPRITE_WIDTH ); x--; )
-                {
-                    size_t data_index( (src.y + y) * PAGE_DATA_WIDTH + src.x + x );
-                    if( data_index >= data_page.data.size() )
-                    {
-                        Ogre::LogManager::getSingleton().stream()
-                            << "Error: data page Index out of Bounds " << data_index;
-                    }
-                    uint8 index( data_page.data[ data_index ] );
-                    if( index >= palette_page.size() )
-                    {
-                        Ogre::LogManager::getSingleton().stream()
-                            << "Error: palette page Index out of Bounds " << index;
-                    }
 
-                    data_index = (dst_y + y ) * row_pitch + dst_x + x;
-                    if( data_index >= pixel_count )
+            // Position sprites in 32x32 blocks
+            if (sprite.width == 32)
+            {
+                dst_x = dst_x_32;
+                dst_y = dst_y_32;
+
+                dst_x_32 += 32;
+                if (dst_x_32 == width)
+                {
+                    dst_y_32 += 32;
+                    dst_x_32 = 0;
+                }
+            }
+            else if (sprite.width == 16)
+            {
+                // if we start new 16x16*4 block
+                if (dst_n_16 == 0)
+                {
+                    dst_x_16 = dst_x_32;
+                    dst_y_16 = dst_y_32;
+
+                    dst_x_32 += 32;
+                    if (dst_x_32 == width)
                     {
-                        Ogre::LogManager::getSingleton().stream()
-                            << "Error: writing Pixel out of Bounds " << data_index
-                            << " " << (dst_x + x) << " x " << dst_y + y;
+                        dst_y_32 += 32;
+                        dst_x_32 = 0;
                     }
-                    Ogre::ColourValue colour( palette_page[ index ] );
-                    if( index == 0 && colour != Ogre::ColourValue::Black)
+                }
+
+                dst_x = dst_x_16;
+                dst_y = dst_y_16;
+
+                ++dst_n_16;
+                if (dst_n_16 == 1 || dst_n_16 == 3)
+                {
+                    dst_x_16 += 16;
+                }
+                else if (dst_n_16 == 2)
+                {
+                    dst_x_16 -= 16;
+                    dst_y_16 += 16;
+                }
+                else if (dst_n_16 == 4)
+                {
+                    dst_n_16 = 0;
+                }
+            }
+            else
+            {
+                Ogre::LogManager::getSingleton().stream()
+                    << "Error: sprite data with invalid size";
+            }
+
+            if (data_page.value_size == 2)
+            {
+                for (uint16 y((*it)->height); y--;)
+                {
+                    for (uint16 x((*it)->width); x--;)
                     {
-                        colour.a = 0;
+                        size_t data_index((src.y + y) * PAGE_DATA_WIDTH + src.x + x);
+                        if (data_index >= data_page.colors.size())
+                        {
+                            Ogre::LogManager::getSingleton().stream()
+                                << "Error: data page Index out of Bounds " << data_index;
+                        }
+
+                        Color colour(data_page.colors.at(data_index));
+                        data_index = (dst_y + y) * row_pitch + dst_x + x;
+                        if (data_index >= pixel_count)
+                        {
+                            Ogre::LogManager::getSingleton().stream()
+                                << "Error: writing Pixel out of Bounds " << data_index
+                                << " " << (dst_x + x) << " x " << dst_y + y;
+                        }
+                        color[data_index] = colour.getAsARGB();
+                    }
+                }
+            }
+            else if (data_page.value_size == 1)
+            {
+                if (sprite.palette_page >= palette->getPages().size())
+                {
+                    // fr_e substrative blending hack
+                    if (mName.compare("fr_e.background") == 0 && sprite.has_blending && palette->getPages().size() == 2)
+                    {
+                        sprite.palette_page = sprite.data_page > 16; // Repair palette id
+                        sprite.blending = 2; // Substrative blending
+                    }
+                    // lastmap hack
+                    else if (mName.compare("lastmap.background") == 0 && sprite.has_blending && palette->getPages().size() >= 7)
+                    {
+                        sprite.palette_page = 6; // Repair palette id
+                        sprite.blending = 2; // Substrative blending
                     }
                     else
                     {
-                        colour.a = 1;
+                        Ogre::LogManager::getSingleton().stream() << "Error: palette page Index out of Bounds " << sprite.palette_page;
                     }
-                    color[data_index] = colour.getAsARGB();
                 }
+                const PaletteFile::Page& palette_page(palette->getPage(sprite.palette_page));
+                bool firstColorHidden(false);
+                if (sprite.palette_page < PALETTE_ENTRY_COUNT)
+                {
+                    firstColorHidden = m_palette[sprite.palette_page] > 0;
+                }
+                for (uint16 y(sprite.height); y--;)
+                {
+                    for (uint16 x(sprite.width); x--;)
+                    {
+                        size_t data_index((src.y + y) * PAGE_DATA_WIDTH + src.x + x);
+                        if (data_index >= data_page.data.size())
+                        {
+                            Ogre::LogManager::getSingleton().stream() << "Error: data page Index out of Bounds " << data_index;
+                        }
+                        uint8 index(data_page.data.at(data_index));
+                        if (index >= palette_page.size())
+                        {
+                            Ogre::LogManager::getSingleton().stream()
+                                << "Error: palette page Index out of Bounds " << index;
+                        }
+
+                        data_index = (dst_y + y) * row_pitch + dst_x + x;
+                        if (data_index >= pixel_count)
+                        {
+                            Ogre::LogManager::getSingleton().stream()
+                                << "Error: writing Pixel out of Bounds " << data_index
+                                << " " << (dst_x + x) << " x " << dst_y + y;
+                        }
+                        Color colour(palette_page[index]);
+                        // Strange PC version behavior: empty colors are replaced by the first color and the first color is hidden by a flag
+                        if (colour == Color::ZERO)
+                        {
+                            colour = palette_page[0];
+                        }
+                        if (index == 0 && firstColorHidden)
+                        {
+                            colour.a = 0;
+                        }
+                        else if (colour.a && (colour.r != 0 || colour.g != 0 || colour.b != 0))
+                        {
+                            colour.a = 0.5;
+                        }
+                        else
+                        {
+                            colour.a = 1;
+                        }
+                        color[data_index] = colour.getAsARGB();
+                    }
+                }
+                
             }
 
-            dst_x += SPRITE_WIDTH;
-            if( dst_x >= width )
-            {
-                dst_x = 0;
-                dst_y += SPRITE_HEIGHT;
-            }
+            // Source in the texture atlas is where we just copied it to
+            sprite.src.x = dst_x;
+            sprite.src.y = dst_y;
+
         }
 
         Ogre::DataStreamPtr stream( buffer );

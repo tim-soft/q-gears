@@ -31,8 +31,9 @@ THE SOFTWARE.
 namespace QGears
 {
     //---------------------------------------------------------------------
-    const String Background2DFileXMLSerializer::BLENDING_ALPHA( "alpha" );
-    const String Background2DFileXMLSerializer::BLENDING_ADD  ( "add"   );
+    const String Background2DFileXMLSerializer::BLENDING_ALPHA   ( "alpha"    );
+    const String Background2DFileXMLSerializer::BLENDING_ADD     ( "add"      );
+    const String Background2DFileXMLSerializer::BLENDING_SUBTRACT( "subtract" );
 
     //---------------------------------------------------------------------
     Background2DFileXMLSerializer::Background2DFileXMLSerializer() :
@@ -49,7 +50,7 @@ namespace QGears
     void
     Background2DFileXMLSerializer::readHeader( TiXmlNode *node )
     {
-        if( node == NULL || node->ValueStr() != "background2d" )
+        if( node == nullptr || node->ValueStr() != "background2d" )
         {
             OGRE_EXCEPT(Ogre::Exception::ERR_INVALIDPARAMS
                 ,"not a valid background2d file, no <background2d> in root"
@@ -62,7 +63,7 @@ namespace QGears
     Background2DFileXMLSerializer::readAttribute( TiXmlNode &node, const String &attribute, Blending &pDest, const Blending &pDefault )
     {
         const String *value( readAttribute( node, attribute ) );
-        if( value == NULL )
+        if( value == nullptr )
         {
             pDest = pDefault;
             return false;
@@ -75,6 +76,11 @@ namespace QGears
         if( *value == BLENDING_ALPHA )
         {
             pDest = B_ALPHA;
+            return true;
+        }
+        if( *value == BLENDING_SUBTRACT )
+        {
+            pDest = B_SUBTRACT;
             return true;
         }
         pDest = pDefault;

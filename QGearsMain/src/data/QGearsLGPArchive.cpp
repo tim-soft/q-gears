@@ -51,8 +51,15 @@ namespace QGears
     {
         //OGRE_LOCK_AUTO_MUTEX
         std::ifstream *ifs( OGRE_NEW_T( std::ifstream, Ogre::MEMCATEGORY_GENERAL )( mName.c_str(), std::ifstream::binary ) );
+        load( OGRE_NEW Ogre::FileStreamDataStream( ifs ) );
+    }
+
+    //-------------------------------------------------------------------------
+    void
+    LGPArchive::load( Ogre::DataStream* lgp )
+    {
         m_lgp_file.setNull();
-        m_lgp_file.bind( OGRE_NEW Ogre::FileStreamDataStream( ifs ) );
+        m_lgp_file.bind( lgp );
         LGPArchiveSerializer lgp_archive_serializer;
         lgp_archive_serializer.importLGPArchive( m_lgp_file, this );
 
@@ -63,10 +70,11 @@ namespace QGears
             file_info.archive = this;
             file_info.filename = it->file_name;
             StringUtil::splitFilename( it->file_name, file_info.basename, file_info.path );
+            // TODO: This is actually still the compressed size!!
             file_info.uncompressedSize = it->data_size;
             file_info.compressedSize = file_info.uncompressedSize;
 
-            LOG_DEBUG( "add file:" + file_info.filename );
+            //LOG_DEBUG( "add file:" + file_info.filename );
             m_file_infos.push_back( file_info );
             ++it;
         }
@@ -90,7 +98,7 @@ namespace QGears
     LGPArchive::open( const String& filename, bool readOnly ) const
     {
         LOG_DEBUG( "file:" + filename + " readOnly: " + Ogre::StringConverter::toString(readOnly) );
-        Ogre::MemoryDataStream* buffer( NULL );
+        Ogre::MemoryDataStream* buffer( nullptr );
         if( !m_lgp_file.isNull() )
         {
             FileList::const_iterator it( m_files.begin() );

@@ -40,7 +40,8 @@ THE SOFTWARE.
 namespace QGears
 {
     //---------------------------------------------------------------------
-    const String    HRCFile::RESOURCE_TYPE( "QGearsHRCFile" );
+    /*static*/ const String    HRCFile::RESOURCE_TYPE( "QGearsHRCFile" );
+    /*static*/ const float     HRCFile::kDownScaler = 1.0f; //33.0f; TODO fix unit tests before changing me
 
     //---------------------------------------------------------------------
     HRCFile::HRCFile( Ogre::ResourceManager *creator
@@ -48,8 +49,8 @@ namespace QGears
                      ,const String &group, bool isManual
                      ,Ogre::ManualResourceLoader *loader ) :
         Ogre::Resource( creator, name, handle, group, isManual, loader )
-       ,m_mesh_loader( NULL )
-       ,m_skeleton_loader( NULL )
+       ,m_mesh_loader( nullptr )
+       ,m_skeleton_loader( nullptr )
     {
         createParamDictionary( RESOURCE_TYPE );
     }
@@ -61,13 +62,13 @@ namespace QGears
         {
             Ogre::SkeletonManager::getSingleton().remove( m_skeleton->getHandle() );
             delete m_skeleton_loader;
-            m_skeleton_loader = NULL;
+            m_skeleton_loader = nullptr;
         }
         if( m_mesh_loader )
         {
             Ogre::MeshManager::getSingleton().remove( m_mesh->getHandle() );
             delete m_mesh_loader;
-            m_mesh_loader = NULL;
+            m_mesh_loader = nullptr;
         }
 
         m_skeleton.setNull();
@@ -83,12 +84,13 @@ namespace QGears
         Ogre::DataStreamPtr stream( Ogre::ResourceGroupManager::getSingleton().openResource( mName, mGroup, true, this ) );
         serializer.importHRCFile( stream, this );
 
+
         const String skeleton_file_name( getSkeletonFileName() );
         Ogre::SkeletonManager &skeleton_manager( Ogre::SkeletonManager::getSingleton() );
         m_skeleton = skeleton_manager.getByName( skeleton_file_name, mGroup );
         if( m_skeleton.isNull() )
         {
-            assert( m_skeleton_loader == NULL );
+            assert( m_skeleton_loader == nullptr );
             m_skeleton_loader = new HRCSkeletonLoader( *this );
             m_skeleton = skeleton_manager.create( skeleton_file_name, mGroup, true, m_skeleton_loader );
         }
@@ -100,7 +102,7 @@ namespace QGears
         m_mesh = mesh_manager.getByName( mesh_file_name, mGroup );
         if( m_mesh.isNull() )
         {
-            assert( m_mesh_loader == NULL );
+            assert( m_mesh_loader == nullptr );
             m_mesh_loader = new HRCMeshLoader( *this );
             m_mesh = mesh_manager.create( mesh_file_name, mGroup, true, m_mesh_loader );
         }
@@ -156,7 +158,7 @@ namespace QGears
 
     //---------------------------------------------------------------------
     String
-    HRCFile::getSkeletonFileName() const
+    HRCFile::getSkeletonFileName( void ) const
     {
         String path;
         StringUtil::splitPath( getName(), path );
@@ -165,7 +167,7 @@ namespace QGears
 
     //---------------------------------------------------------------------
     String
-    HRCFile::getMeshFileName() const
+    HRCFile::getMeshFileName( void ) const
     {
         String base_name;
         StringUtil::splitBase( getName(), base_name );

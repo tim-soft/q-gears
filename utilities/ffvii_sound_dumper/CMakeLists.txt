@@ -26,6 +26,11 @@ add_executable(ff7_sound_dumper
   ${HEADER_FILES}
   ${SOURCE_FILES}
 )
+SET_PROPERTY(TARGET ff7_sound_dumper PROPERTY FOLDER "utilities")
+
+if (APPLE)
+target_link_libraries(ff7_sound_dumper "-framework CoreFoundation -framework Cocoa -framework IOKit")
+endif()
 
 if(WIN32)
   set_target_properties(ff7_sound_dumper PROPERTIES WIN32_EXECUTABLE ON)
@@ -36,6 +41,8 @@ endif()
 
 set(LIBRARIES
     Utility
+    QGearsMain
+    q-gears-data
 )
 target_link_libraries(ff7_sound_dumper    ${LIBRARIES})
 

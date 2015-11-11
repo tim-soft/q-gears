@@ -39,6 +39,7 @@ THE SOFTWARE.
 #include "QGearsCameraMatrixFile.h"
 #include "QGearsPaletteFile.h"
 #include "QGearsHRCFile.h"
+#include "QGearsTriggersFile.h"
 
 namespace QGears
 {
@@ -61,20 +62,24 @@ namespace QGears
 
         static const String RESOURCE_TYPE;
 
-        virtual const BackgroundFilePtr&    getBackground  ( void ) const;
-        virtual const CameraMatrixFilePtr&  getCameraMatrix( void ) const;
-        virtual const ModelListFilePtr&     getModelList   ( void ) const;
-        virtual const PaletteFilePtr&       getPalette     ( void ) const;
-        virtual const WalkmeshFilePtr&      getWalkmesh    ( void ) const;
+        const std::vector<u8>&      getRawScript() const;
+        const BackgroundFilePtr&    getBackground() const;
+        const CameraMatrixFilePtr&  getCameraMatrix() const;
+        const ModelListFilePtr&     getModelList() const;
+        const PaletteFilePtr&       getPalette() const;
+        const WalkmeshFilePtr&      getWalkmesh() const;
+        const TriggersFilePtr&      getTriggers() const;
 
-        virtual void setBackground  ( const BackgroundFilePtr      &background    );
-        virtual void setCameraMatrix( const CameraMatrixFilePtr    &camera_matrix );
-        virtual void setModelList   ( const ModelListFilePtr       &model_list    );
-        virtual void setPalette     ( const PaletteFilePtr         &palette       );
-        virtual void setWalkmesh    ( const WalkmeshFilePtr        &walkmesh      );
+        void setRawScript(const std::vector<u8>& scriptData);
+        void setBackground  ( const BackgroundFilePtr      &background    );
+        void setCameraMatrix( const CameraMatrixFilePtr    &camera_matrix );
+        void setModelList   ( const ModelListFilePtr       &model_list    );
+        void setPalette     ( const PaletteFilePtr         &palette       );
+        void setWalkmesh    ( const WalkmeshFilePtr        &walkmesh      );
+        void setTriggers(const TriggersFilePtr& triggers);
 
-        virtual String getBackground2DName( void ) const;
-        virtual String getBackgroundTextureName( void ) const;
+        String getBackground2DName( void ) const;
+        String getBackgroundTextureName( void ) const;
 
     protected:
         typedef std::vector<HRCFilePtr>         HRCList;
@@ -84,11 +89,11 @@ namespace QGears
         static const String SUFFIX_BACKGROUND_TEXTURE;
         static const String SUFFIX_BACKGROUND_2D;
 
-        virtual void loadImpl( void );
-        virtual void loadModels( void );
-        virtual void loadAnimations( const HRCFilePtr &model, const AnimationList &animations );
-        virtual void unloadImpl( void );
-        virtual size_t calculateSize( void ) const;
+        virtual void loadImpl( void ) override;
+        void loadModels( void );
+        void loadAnimations( const HRCFilePtr &model, const AnimationList &animations );
+        virtual void unloadImpl( void ) override;
+        virtual size_t calculateSize( void ) const override;
 
         virtual const String& getResourceType( void ) const;
 
@@ -98,6 +103,8 @@ namespace QGears
         ModelListFilePtr            m_model_list;
         PaletteFilePtr              m_palette;
         WalkmeshFilePtr             m_walkmesh;
+        TriggersFilePtr             m_triggers;
+        std::vector<u8>             m_rawScript;
 
         FLevelTextureLoader        *m_background_texture_loader;
         Ogre::TexturePtr            m_background_texture;
